@@ -12,18 +12,18 @@ const BACKEND_URL = "https://surepolicyai.onrender.com";
 const getWeatherRisk = (city) => {
   const lowerCity = city ? city.toLowerCase() : '';
   if (lowerCity.includes('oklahoma') || lowerCity.includes('dallas') || lowerCity.includes('kansas')) {
-    return { condition: 'Severe Storms', risk: 'Hail Damage', icon: CloudRain, color: 'text-purple-600 bg-purple-50', advice: 'High hail probability. Review Progressive Comprehensive coverage for hail repair.' };
+    return { condition: 'Severe Storms', risk: 'Hail Damage', icon: CloudRain, color: 'text-purple-600 bg-purple-50', advice: 'Consider checking if comprehensive coverage includes hail damage.' };
   }
   if (lowerCity.includes('miami') || lowerCity.includes('tampa') || lowerCity.includes('orleans')) {
-    return { condition: 'Hurricane Season', risk: 'Flood/Wind', icon: Wind, color: 'text-blue-600 bg-blue-50', advice: 'Flood zone alert. Ask about Progressive Flood Insurance endorsements.' };
+    return { condition: 'Hurricane Season', risk: 'Flood/Wind', icon: Wind, color: 'text-blue-600 bg-blue-50', advice: 'Flood insurance is often recommended here as standard policies may not cover it.' };
   }
   if (lowerCity.includes('california') || lowerCity.includes('los angeles') || lowerCity.includes('francisco')) {
-    return { condition: 'Dry/Arid', risk: 'Wildfire', icon: Sun, color: 'text-orange-600 bg-orange-50', advice: 'High fire risk area. Check Progressive Homeowners policy for fire exclusions.' };
+    return { condition: 'Dry/Arid', risk: 'Wildfire', icon: Sun, color: 'text-orange-600 bg-orange-50', advice: 'Wildfire exclusions are common; reviewing your fire protection details is wise.' };
   }
   if (lowerCity.includes('seattle') || lowerCity.includes('london')) {
-    return { condition: 'Constant Rain', risk: 'Slippery Roads', icon: Umbrella, color: 'text-cyan-600 bg-cyan-50', advice: 'Increased accident risk. Ensure Progressive Collision deductibles are manageable.' };
+    return { condition: 'Constant Rain', risk: 'Slippery Roads', icon: Umbrella, color: 'text-cyan-600 bg-cyan-50', advice: 'Slick roads can increase accident risk; collision coverage is worth reviewing.' };
   }
-  return { condition: 'Clear', risk: 'Low', icon: Sun, color: 'text-yellow-600 bg-yellow-50', advice: 'Conditions are stable. A perfect time to bundle and save with Progressive.' };
+  return { condition: 'Clear', risk: 'Low', icon: Sun, color: 'text-yellow-600 bg-yellow-50', advice: 'Conditions are stable. It might be a good time to review potential savings.' };
 };
 
 // --- COMPONENTS ---
@@ -94,7 +94,7 @@ const WeatherCard = ({ location }) => {
 
 export default function App() {
   const [messages, setMessages] = useState([
-    { role: 'system', content: "Hello! I'm your Progressive Insurance AI Agent. I can help you find the perfect Progressive policy, explain our coverage options like Snapshot®, or check for local risks. How can I help you save with Progressive today?" }
+    { role: 'system', content: "Hello! I'm the Progressive Policy AI Assistant. I can help simplify complex insurance terms, give you estimated rate ranges, and suggest Progressive options that might fit your needs. Please note I am an AI, not a licensed agent." }
   ]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -129,7 +129,6 @@ export default function App() {
 
     const userMsg = { role: 'user', content: inputValue };
     
-    // Optimistically add user message
     const newMessages = [...messages, userMsg];
     setMessages(newMessages);
     setInputValue('');
@@ -138,17 +137,17 @@ export default function App() {
     try {
       const weatherData = getWeatherRisk(profile.location);
       
-      // --- STEP 1: FORMAT HISTORY ---
-      // We turn the previous messages into a script so the AI knows what happened.
+      // --- FORMAT HISTORY ---
       const conversationHistory = newMessages.map(msg => {
-        const roleName = msg.role === 'user' ? 'User' : 'Progressive Agent';
+        const roleName = msg.role === 'user' ? 'User' : 'AI Assistant';
         return `${roleName}: ${msg.content}`;
       }).join('\n\n');
 
-      // --- STEP 2: STRICTER SYSTEM PROMPT ---
+      // --- UPDATED SAFE SYSTEM PROMPT ---
       const systemContext = `
-        You are an exclusive Insurance Agent for "Progressive Insurance".
-        
+        You are a helpful AI Assistant for "Progressive Insurance". 
+        IMPORTANT: You are NOT a licensed insurance agent. You cannot bind coverage or give official quotes.
+
         User Profile:
         - Name: ${profile.name}
         - Location: ${profile.location}
@@ -160,12 +159,12 @@ export default function App() {
         ${conversationHistory}
 
         INSTRUCTIONS:
-        1. Read the "PREVIOUS CONVERSATION HISTORY" above.
-        2. DO NOT repeat introductions ("Hello, I am...") if you have already done so.
-        3. DO NOT repeat the full product sales pitch (Snapshot, Bundling, etc.) if you just gave it.
-        4. If the user says "yes", "okay", or agrees, MOVE FORWARD to the next step (like asking for vehicle details to start a quote).
-        5. Only reference the "Local Risk" if it is relevant to the current turn. Don't force it into every message.
-        6. Keep responses concise and conversational. Avoid long walls of text.
+        1. **Role:** Act as an informational guide, not a salesperson. Simplify complex policies (like Liability, Comprehensive, Snapshot) into easy-to-understand language.
+        2. **Rate Estimates:** If asked about price, provide *estimated ranges* based on the user's profile (e.g., "For a driver your age in this city, rates often fall between $X and $Y"). ALWAYS state that final rates depend on a formal quote.
+        3. **Progressive Focus:** Recommend Progressive features (Snapshot, Bundling) as helpful options, not requirements.
+        4. **Disclaimer:** Briefly mention that you are an AI and they should verify details with a real agent.
+        5. **Liability:** Use phrases like "typically," "generally," "you might consider," or "estimated to be" rather than "you need" or "it will cost."
+        6. **Context:** Use the Local Risk data to explain *why* a certain coverage (like Flood or Comprehensive) might be useful in their specific area.
       `;
 
       const response = await fetch(`${BACKEND_URL}/api/chat`, {
