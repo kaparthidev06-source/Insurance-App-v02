@@ -12,18 +12,18 @@ const BACKEND_URL = "https://surepolicyai.onrender.com";
 const getWeatherRisk = (city) => {
   const lowerCity = city ? city.toLowerCase() : '';
   if (lowerCity.includes('oklahoma') || lowerCity.includes('dallas') || lowerCity.includes('kansas')) {
-    return { condition: 'Severe Storms', risk: 'Hail Damage', icon: CloudRain, color: 'text-purple-600 bg-purple-50', advice: 'Consider checking if comprehensive coverage includes hail damage.' };
+    return { condition: 'Severe Storms', risk: 'Hail Damage', icon: CloudRain, color: 'text-purple-600 bg-purple-50', advice: 'Check if comprehensive coverage includes hail damage.' };
   }
   if (lowerCity.includes('miami') || lowerCity.includes('tampa') || lowerCity.includes('orleans')) {
-    return { condition: 'Hurricane Season', risk: 'Flood/Wind', icon: Wind, color: 'text-blue-600 bg-blue-50', advice: 'Flood insurance is often recommended here as standard policies may not cover it.' };
+    return { condition: 'Hurricane Season', risk: 'Flood/Wind', icon: Wind, color: 'text-blue-600 bg-blue-50', advice: 'Flood insurance is often recommended here.' };
   }
   if (lowerCity.includes('california') || lowerCity.includes('los angeles') || lowerCity.includes('francisco')) {
-    return { condition: 'Dry/Arid', risk: 'Wildfire', icon: Sun, color: 'text-orange-600 bg-orange-50', advice: 'Wildfire exclusions are common; reviewing your fire protection details is wise.' };
+    return { condition: 'Dry/Arid', risk: 'Wildfire', icon: Sun, color: 'text-orange-600 bg-orange-50', advice: 'Review fire protection details.' };
   }
   if (lowerCity.includes('seattle') || lowerCity.includes('london')) {
-    return { condition: 'Constant Rain', risk: 'Slippery Roads', icon: Umbrella, color: 'text-cyan-600 bg-cyan-50', advice: 'Slick roads can increase accident risk; collision coverage is worth reviewing.' };
+    return { condition: 'Constant Rain', risk: 'Slippery Roads', icon: Umbrella, color: 'text-cyan-600 bg-cyan-50', advice: 'Slick roads increase risk; review collision coverage.' };
   }
-  return { condition: 'Clear', risk: 'Low', icon: Sun, color: 'text-yellow-600 bg-yellow-50', advice: 'Conditions are stable. It might be a good time to review potential savings.' };
+  return { condition: 'Clear', risk: 'Low', icon: Sun, color: 'text-yellow-600 bg-yellow-50', advice: 'Conditions are stable. Good time to review savings.' };
 };
 
 // --- COMPONENTS ---
@@ -48,8 +48,11 @@ const MessageBubble = ({ message }) => {
               ? 'bg-red-50 border border-red-100 text-red-600 rounded-tl-none'
               : 'bg-white text-gray-700 border border-gray-100 rounded-tl-none'
         }`}>
+          {/* We render markdown-like bolding manually for simplicity in this demo */}
           {message.content.split('\n').map((line, i) => (
-            <p key={i} className="mb-2 last:mb-0">{line}</p>
+            <p key={i} className="mb-2 last:mb-0" dangerouslySetInnerHTML={{ 
+              __html: line.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') 
+            }} />
           ))}
         </div>
       </div>
@@ -94,7 +97,7 @@ const WeatherCard = ({ location }) => {
 
 export default function App() {
   const [messages, setMessages] = useState([
-    { role: 'system', content: "Hello! I'm the Progressive Policy AI Assistant. I can help simplify complex insurance terms, give you estimated rate ranges, and suggest Progressive options that might fit your needs. Please note I am an AI, not a licensed agent." }
+    { role: 'system', content: "Hello! I'm the Progressive Policy AI Assistant. I can help simplify complex insurance terms, give you estimated rate ranges, and suggest Progressive options. Please note I am an AI, not a licensed agent." }
   ]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -137,16 +140,14 @@ export default function App() {
     try {
       const weatherData = getWeatherRisk(profile.location);
       
-      // --- FORMAT HISTORY ---
       const conversationHistory = newMessages.map(msg => {
         const roleName = msg.role === 'user' ? 'User' : 'AI Assistant';
         return `${roleName}: ${msg.content}`;
       }).join('\n\n');
 
-      // --- UPDATED SAFE SYSTEM PROMPT ---
       const systemContext = `
         You are a helpful AI Assistant for "Progressive Insurance". 
-        IMPORTANT: You are NOT a licensed insurance agent. You cannot bind coverage or give official quotes.
+        IMPORTANT: You are NOT a licensed insurance agent. You cannot bind coverage.
 
         User Profile:
         - Name: ${profile.name}
@@ -159,12 +160,16 @@ export default function App() {
         ${conversationHistory}
 
         INSTRUCTIONS:
-        1. **Role:** Act as an informational guide, not a salesperson. Simplify complex policies (like Liability, Comprehensive, Snapshot) into easy-to-understand language.
-        2. **Rate Estimates:** If asked about price, provide *estimated ranges* based on the user's profile (e.g., "For a driver your age in this city, rates often fall between $X and $Y"). ALWAYS state that final rates depend on a formal quote.
-        3. **Progressive Focus:** Recommend Progressive features (Snapshot, Bundling) as helpful options, not requirements.
-        4. **Disclaimer:** Briefly mention that you are an AI and they should verify details with a real agent.
-        5. **Liability:** Use phrases like "typically," "generally," "you might consider," or "estimated to be" rather than "you need" or "it will cost."
-        6. **Context:** Use the Local Risk data to explain *why* a certain coverage (like Flood or Comprehensive) might be useful in their specific area.
+        1. **FORMATTING RULES (CRITICAL):**
+           - **Be Brief:** Avoid long paragraphs. Use short, punchy sentences.
+           - **Bold Key Terms:** Always **bold** product names (e.g., **Snapshot**), coverage types (e.g., **Liability**), and important advice.
+           - **Use Bullet Points:** Break down information into lists whenever possible.
+        
+        2. **Role:** Act as a guide, not a salesperson. Simplify policies.
+        3. **Rate Estimates:** Provide *estimated ranges* only. State that final rates depend on a quote.
+        4. **Progressive Focus:** Recommend **Progressive** features only.
+        5. **Disclaimer:** Briefly mention you are an AI.
+        6. **Liability:** Use soft language ("typically," "estimated").
       `;
 
       const response = await fetch(`${BACKEND_URL}/api/chat`, {
