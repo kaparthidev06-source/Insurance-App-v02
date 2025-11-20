@@ -6,7 +6,6 @@ import {
 } from 'lucide-react';
 
 // --- CONFIGURATION ---
-// This connects to your live cloud "Brain" on Render
 const BACKEND_URL = "https://surepolicyai.onrender.com"; 
 
 // --- MOCK WEATHER SERVICE ---
@@ -36,14 +35,12 @@ const MessageBubble = ({ message }) => {
   return (
     <div className={`flex w-full ${isUser ? 'justify-end' : 'justify-start'} mb-6 animate-fadeIn`}>
       <div className={`flex max-w-[85%] md:max-w-[75%] ${isUser ? 'flex-row-reverse' : 'flex-row'} gap-4`}>
-        {/* Avatar */}
         <div className={`w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center shadow-sm ${
           isUser ? 'bg-blue-600' : isError ? 'bg-red-500' : 'bg-white border border-gray-200'
         }`}>
           {isUser ? <User size={18} className="text-white" /> : <Shield size={18} className="text-blue-600" />}
         </div>
         
-        {/* Bubble */}
         <div className={`p-5 rounded-2xl shadow-sm text-sm leading-7 ${
           isUser 
             ? 'bg-blue-600 text-white rounded-tr-none' 
@@ -96,7 +93,6 @@ const WeatherCard = ({ location }) => {
 };
 
 export default function App() {
-  // --- STATE ---
   const [messages, setMessages] = useState([
     { role: 'system', content: "Hello! I'm your Progressive Insurance AI Agent. I can help you find the perfect Progressive policy, explain our coverage options like Snapshot®, or check for local risks. How can I help you save with Progressive today?" }
   ]);
@@ -104,7 +100,6 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [showProfileMobile, setShowProfileMobile] = useState(false);
   
-  // User Profile State
   const [profile, setProfile] = useState({
     name: 'Alex Johnson',
     location: 'Oklahoma City, OK',
@@ -116,13 +111,10 @@ export default function App() {
 
   const messagesEndRef = useRef(null);
 
-  // --- SCROLL TO BOTTOM ---
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // --- HANDLERS ---
-  
   const handleProfileChange = (e) => {
     setProfile({ ...profile, [e.target.name]: e.target.value });
   };
@@ -136,38 +128,46 @@ export default function App() {
     if (!inputValue.trim()) return;
 
     const userMsg = { role: 'user', content: inputValue };
-    setMessages(prev => [...prev, userMsg]);
+    
+    // Optimistically add user message
+    const newMessages = [...messages, userMsg];
+    setMessages(newMessages);
     setInputValue('');
     setIsLoading(true);
 
     try {
-      // 1. Prepare Context
       const weatherData = getWeatherRisk(profile.location);
       
-      // --- STRICT PROGRESSIVE ONLY PROMPT ---
+      // --- STEP 1: FORMAT HISTORY ---
+      // We turn the previous messages into a script so the AI knows what happened.
+      const conversationHistory = newMessages.map(msg => {
+        const roleName = msg.role === 'user' ? 'User' : 'Progressive Agent';
+        return `${roleName}: ${msg.content}`;
+      }).join('\n\n');
+
+      // --- STEP 2: STRICTER SYSTEM PROMPT ---
       const systemContext = `
         You are an exclusive Insurance Agent for "Progressive Insurance".
         
-        User Profile Context:
+        User Profile:
         - Name: ${profile.name}
-        - Age: ${profile.age}
         - Location: ${profile.location}
         - Assets: ${profile.hasCar ? 'Car' : 'No Car'}, ${profile.hasHome ? 'Homeowner' : 'Renter'}
         
-        Current Local Risk Data for ${profile.location}:
-        - Condition: ${weatherData.condition}
-        - Specific Risk: ${weatherData.risk}
-        - Automated Advice: ${weatherData.advice}
+        Local Risk: ${weatherData.condition} (${weatherData.risk})
+
+        PREVIOUS CONVERSATION HISTORY:
+        ${conversationHistory}
 
         INSTRUCTIONS:
-        1. You ONLY represent Progressive Insurance. Do not mention or recommend any other insurance companies.
-        2. Recommend specific Progressive products (e.g., Progressive Snapshot®, Progressive Home & Auto Bundle, Name Your Price® Tool) based on the user's profile and assets.
-        3. Use the User Profile to personalize advice.
-        4. CRITICAL: You MUST reference the "Current Local Risk Data" above and explain how specific Progressive coverage protects against it.
-        5. Keep the tone professional, empathetic, and trustworthy.
+        1. Read the "PREVIOUS CONVERSATION HISTORY" above.
+        2. DO NOT repeat introductions ("Hello, I am...") if you have already done so.
+        3. DO NOT repeat the full product sales pitch (Snapshot, Bundling, etc.) if you just gave it.
+        4. If the user says "yes", "okay", or agrees, MOVE FORWARD to the next step (like asking for vehicle details to start a quote).
+        5. Only reference the "Local Risk" if it is relevant to the current turn. Don't force it into every message.
+        6. Keep responses concise and conversational. Avoid long walls of text.
       `;
 
-      // 2. SEND TO YOUR CLOUD BACKEND
       const response = await fetch(`${BACKEND_URL}/api/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -187,7 +187,7 @@ export default function App() {
       console.error("Error calling Backend:", error);
       setMessages(prev => [...prev, { 
         role: 'assistant', 
-        content: `Connection Error: ${error.message}. Is your backend server running on port 3000?`,
+        content: `Connection Error: ${error.message}. Is your backend server running?`,
         isError: true 
       }]);
     } finally {
@@ -198,12 +198,11 @@ export default function App() {
   return (
     <div className="flex h-screen w-full bg-slate-50 font-sans text-slate-900 overflow-hidden relative">
       
-      {/* --- MOBILE MENU OVERLAY --- */}
       {showProfileMobile && (
         <div className="absolute inset-0 bg-black/50 z-40 md:hidden backdrop-blur-sm" onClick={() => setShowProfileMobile(false)} />
       )}
 
-      {/* --- LEFT PANEL: PROFILE & SETTINGS --- */}
+      {/* --- LEFT PANEL --- */}
       <aside className={`
         absolute md:relative z-50 w-80 bg-white h-full border-r border-slate-200 flex flex-col shadow-2xl md:shadow-none transition-transform duration-300 ease-in-out
         ${showProfileMobile ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
@@ -221,92 +220,43 @@ export default function App() {
         </div>
 
         <div className="flex-1 overflow-y-auto p-6">
-          
-          {/* Weather Widget */}
           <WeatherCard location={profile.location} />
-
           <div className="flex items-center gap-2 mb-4 mt-8">
             <div className="h-px flex-1 bg-slate-200"></div>
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Your Profile</span>
             <div className="h-px flex-1 bg-slate-200"></div>
           </div>
-          
           <div className="space-y-5">
             <div>
               <label className="block text-xs font-semibold text-slate-500 mb-1.5">Full Name</label>
-              <input 
-                type="text" 
-                name="name" 
-                value={profile.name} 
-                onChange={handleProfileChange}
-                className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all shadow-sm"
-              />
+              <input type="text" name="name" value={profile.name} onChange={handleProfileChange} className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm" />
             </div>
-
             <div>
               <label className="block text-xs font-semibold text-slate-500 mb-1.5">Current Location</label>
               <div className="relative">
-                <input 
-                  type="text" 
-                  name="location" 
-                  value={profile.location} 
-                  onChange={handleProfileChange}
-                  className="w-full bg-white border border-slate-200 rounded-lg pl-9 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all shadow-sm"
-                />
+                <input type="text" name="location" value={profile.location} onChange={handleProfileChange} className="w-full bg-white border border-slate-200 rounded-lg pl-9 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm" />
                 <MapPin size={16} className="absolute left-3 top-2.5 text-slate-400" />
               </div>
             </div>
-
-            <div className="flex gap-4">
-              <div className="flex-1">
-                <label className="block text-xs font-semibold text-slate-500 mb-1.5">Age</label>
-                <input 
-                  type="number" 
-                  name="age" 
-                  value={profile.age} 
-                  onChange={handleProfileChange}
-                  className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
-                />
-              </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-500 mb-1.5">Age</label>
+              <input type="number" name="age" value={profile.age} onChange={handleProfileChange} className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm" />
             </div>
-
             <div className="pt-2">
               <label className="block text-xs font-semibold text-slate-500 mb-3">Assets & Coverage</label>
               <div className="space-y-2.5">
-                <button 
-                  onClick={() => toggleAsset('hasCar')}
-                  className={`w-full flex items-center justify-between p-3 rounded-xl border transition-all shadow-sm ${
-                    profile.hasCar ? 'border-blue-200 bg-blue-50 text-blue-800' : 'border-slate-200 hover:border-slate-300 text-slate-600'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className={`p-1.5 rounded-md ${profile.hasCar ? 'bg-blue-200' : 'bg-slate-100'}`}>
-                      <Car size={16} />
-                    </div>
-                    <span className="text-sm font-medium">Vehicle Owner</span>
-                  </div>
+                <button onClick={() => toggleAsset('hasCar')} className={`w-full flex items-center justify-between p-3 rounded-xl border transition-all shadow-sm ${profile.hasCar ? 'border-blue-200 bg-blue-50 text-blue-800' : 'border-slate-200 hover:border-slate-300 text-slate-600'}`}>
+                  <div className="flex items-center gap-3"><div className={`p-1.5 rounded-md ${profile.hasCar ? 'bg-blue-200' : 'bg-slate-100'}`}><Car size={16} /></div><span className="text-sm font-medium">Vehicle Owner</span></div>
                   {profile.hasCar && <CheckCircle2 size={18} className="text-blue-600" />}
                 </button>
-
-                <button 
-                  onClick={() => toggleAsset('hasHome')}
-                  className={`w-full flex items-center justify-between p-3 rounded-xl border transition-all shadow-sm ${
-                    profile.hasHome ? 'border-blue-200 bg-blue-50 text-blue-800' : 'border-slate-200 hover:border-slate-300 text-slate-600'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                     <div className={`p-1.5 rounded-md ${profile.hasHome ? 'bg-blue-200' : 'bg-slate-100'}`}>
-                      <Home size={16} />
-                    </div>
-                    <span className="text-sm font-medium">Home Owner</span>
-                  </div>
+                <button onClick={() => toggleAsset('hasHome')} className={`w-full flex items-center justify-between p-3 rounded-xl border transition-all shadow-sm ${profile.hasHome ? 'border-blue-200 bg-blue-50 text-blue-800' : 'border-slate-200 hover:border-slate-300 text-slate-600'}`}>
+                  <div className="flex items-center gap-3"><div className={`p-1.5 rounded-md ${profile.hasHome ? 'bg-blue-200' : 'bg-slate-100'}`}><Home size={16} /></div><span className="text-sm font-medium">Home Owner</span></div>
                   {profile.hasHome && <CheckCircle2 size={18} className="text-blue-600" />}
                 </button>
               </div>
             </div>
           </div>
         </div>
-
         <div className="p-4 border-t border-slate-100 bg-slate-50/80">
           <div className="flex items-center gap-2 text-xs text-slate-500 justify-center">
             <Sparkles size={14} className="text-blue-400" />
@@ -315,47 +265,27 @@ export default function App() {
         </div>
       </aside>
 
-      {/* --- RIGHT PANEL: CHAT INTERFACE --- */}
+      {/* --- CHAT PANEL --- */}
       <main className="flex-1 flex flex-col bg-slate-50/50 relative">
-        
-        {/* Mobile Header */}
         <header className="md:hidden bg-white border-b border-slate-200 p-4 flex justify-between items-center shadow-sm z-10 sticky top-0">
-          <div className="flex items-center gap-2 text-blue-700 font-bold">
-            <Shield size={24} />
-            <span>Progressive Policy AI</span>
-          </div>
-          <button onClick={() => setShowProfileMobile(true)} className="p-2 bg-slate-100 rounded-full text-slate-600">
-            <Menu size={20} />
-          </button>
+          <div className="flex items-center gap-2 text-blue-700 font-bold"><Shield size={24} /><span>Progressive Policy AI</span></div>
+          <button onClick={() => setShowProfileMobile(true)} className="p-2 bg-slate-100 rounded-full text-slate-600"><Menu size={20} /></button>
         </header>
 
-        {/* Chat Messages Area */}
         <div className="flex-1 overflow-y-auto p-4 md:p-8 scrollbar-thin scrollbar-thumb-slate-300">
           <div className="max-w-3xl mx-auto pb-4">
-            
             {messages.length === 0 && (
               <div className="text-center py-24 opacity-50">
-                <div className="bg-white p-6 rounded-full inline-block mb-4 shadow-sm">
-                  <Shield size={48} className="text-blue-200" />
-                </div>
+                <div className="bg-white p-6 rounded-full inline-block mb-4 shadow-sm"><Shield size={48} className="text-blue-200" /></div>
                 <p className="text-slate-500 text-lg">Ready to analyze your insurance needs.</p>
               </div>
             )}
-
-            {messages.map((msg, idx) => (
-              <MessageBubble key={idx} message={msg} />
-            ))}
-
+            {messages.map((msg, idx) => <MessageBubble key={idx} message={msg} />)}
             {isLoading && (
               <div className="flex w-full justify-start animate-pulse mb-6">
                  <div className="flex max-w-[75%] gap-4">
-                    <div className="w-10 h-10 rounded-full bg-white border border-slate-200 flex items-center justify-center flex-shrink-0">
-                      <Shield size={18} className="text-blue-600" />
-                    </div>
-                    <div className="bg-white border border-slate-100 p-5 rounded-2xl rounded-tl-none flex items-center gap-3 text-slate-500 text-sm shadow-sm">
-                      <Loader2 size={18} className="animate-spin text-blue-500" />
-                      <span>Analyzing policy data...</span>
-                    </div>
+                    <div className="w-10 h-10 rounded-full bg-white border border-slate-200 flex items-center justify-center flex-shrink-0"><Shield size={18} className="text-blue-600" /></div>
+                    <div className="bg-white border border-slate-100 p-5 rounded-2xl rounded-tl-none flex items-center gap-3 text-slate-500 text-sm shadow-sm"><Loader2 size={18} className="animate-spin text-blue-500" /><span>Analyzing policy data...</span></div>
                  </div>
               </div>
             )}
@@ -363,7 +293,6 @@ export default function App() {
           </div>
         </div>
 
-        {/* Input Area */}
         <div className="bg-white p-4 md:p-6 border-t border-slate-200 shadow-lg z-20">
           <div className="max-w-3xl mx-auto">
             <form onSubmit={handleSendMessage} className="relative flex items-end gap-3">
@@ -382,25 +311,14 @@ export default function App() {
                   rows={1}
                 />
               </div>
-              <button 
-                type="submit"
-                disabled={!inputValue.trim() || isLoading}
-                className={`p-4 rounded-xl flex items-center justify-center transition-all shadow-sm ${
-                  !inputValue.trim() || isLoading 
-                    ? 'bg-slate-100 text-slate-400 cursor-not-allowed' 
-                    : 'bg-blue-600 text-white hover:bg-blue-700 hover:shadow-md active:scale-95'
-                }`}
-              >
+              <button type="submit" disabled={!inputValue.trim() || isLoading} className={`p-4 rounded-xl flex items-center justify-center transition-all shadow-sm ${!inputValue.trim() || isLoading ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700 hover:shadow-md active:scale-95'}`}>
                 <Send size={20} className={isLoading ? 'opacity-0' : ''} />
                 {isLoading && <div className="absolute"><Loader2 size={20} className="animate-spin" /></div>}
               </button>
             </form>
-            <p className="text-center text-[10px] text-slate-400 mt-3">
-              SurePolicy AI assesses risks based on the location in your sidebar profile.
-            </p>
+            <p className="text-center text-[10px] text-slate-400 mt-3">SurePolicy AI assesses risks based on the location in your sidebar profile.</p>
           </div>
         </div>
-
       </main>
     </div>
   );
