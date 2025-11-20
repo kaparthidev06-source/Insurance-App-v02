@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 
 // --- CONFIGURATION ---
+// This connects to your live cloud "Brain" on Render
 const BACKEND_URL = "https://surepolicyai.onrender.com"; 
 
 // --- MOCK WEATHER SERVICE ---
@@ -97,7 +98,7 @@ const WeatherCard = ({ location }) => {
 export default function App() {
   // --- STATE ---
   const [messages, setMessages] = useState([
-    { role: 'system', content: "Hello! I'm InsureGuide AI. I can help simplify your policies, recommend coverage, or check for local risks like hail or floods. How can I help you today?" }
+    { role: 'system', content: "Hello! I'm Progressive Policy AI Insurance. I can help simplify your policies, recommend coverage, or check for local risks like hail or floods. How can I help you today?" }
   ]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -144,7 +145,7 @@ export default function App() {
       const weatherData = getWeatherRisk(profile.location);
       
       const systemContext = `
-        You are an expert Insurance Consultant AI. 
+        You are an expert Insurance Consultant AI named "Progressive Policy AI Insurance".
         
         User Profile Context:
         - Name: ${profile.name}
@@ -164,7 +165,7 @@ export default function App() {
         4. Keep the tone professional, empathetic, and trustworthy.
       `;
 
-      // 2. SEND TO YOUR LOCAL BACKEND
+      // 2. SEND TO YOUR CLOUD BACKEND
       const response = await fetch(`${BACKEND_URL}/api/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -210,7 +211,7 @@ export default function App() {
             <div className="bg-blue-600 p-1.5 rounded-lg">
               <Shield className="text-white" size={20} />
             </div>
-            <h1 className="text-lg font-bold tracking-tight text-slate-900">SurePolicy AI</h1>
+            <h1 className="text-sm font-bold tracking-tight text-slate-900">Progressive Policy AI</h1>
           </div>
           <button onClick={() => setShowProfileMobile(false)} className="md:hidden text-gray-400 hover:text-gray-600">
             <X size={24} />
@@ -319,7 +320,7 @@ export default function App() {
         <header className="md:hidden bg-white border-b border-slate-200 p-4 flex justify-between items-center shadow-sm z-10 sticky top-0">
           <div className="flex items-center gap-2 text-blue-700 font-bold">
             <Shield size={24} />
-            <span>SurePolicy AI</span>
+            <span>Progressive Policy AI</span>
           </div>
           <button onClick={() => setShowProfileMobile(true)} className="p-2 bg-slate-100 rounded-full text-slate-600">
             <Menu size={20} />
@@ -378,8 +379,6 @@ export default function App() {
                   className="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-5 pr-12 py-4 max-h-32 min-h-[60px] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none text-sm shadow-inner transition-all group-hover:bg-white"
                   rows={1}
                 />
-                <div className="absolute right-3 bottom-3">
-                </div>
               </div>
               <button 
                 type="submit"
