@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 
 // --- CONFIGURATION ---
-const BACKEND_URL = "http://localhost:3000"; 
+const BACKEND_URL = "https://surepolicyai.onrender.com"; 
 
 // --- MOCK WEATHER SERVICE ---
 const getWeatherRisk = (city) => {
