@@ -13,18 +13,18 @@ const BACKEND_URL = "https://surepolicyai.onrender.com";
 const getWeatherRisk = (city) => {
   const lowerCity = city ? city.toLowerCase() : '';
   if (lowerCity.includes('oklahoma') || lowerCity.includes('dallas') || lowerCity.includes('kansas')) {
-    return { condition: 'Severe Storms', risk: 'Hail Damage', icon: CloudRain, color: 'text-purple-600 bg-purple-50', advice: 'High hail probability. Review auto comprehensive coverage.' };
+    return { condition: 'Severe Storms', risk: 'Hail Damage', icon: CloudRain, color: 'text-purple-600 bg-purple-50', advice: 'High hail probability. Review Progressive Comprehensive coverage for hail repair.' };
   }
   if (lowerCity.includes('miami') || lowerCity.includes('tampa') || lowerCity.includes('orleans')) {
-    return { condition: 'Hurricane Season', risk: 'Flood/Wind', icon: Wind, color: 'text-blue-600 bg-blue-50', advice: 'Flood zone alert. Flood insurance is likely mandatory.' };
+    return { condition: 'Hurricane Season', risk: 'Flood/Wind', icon: Wind, color: 'text-blue-600 bg-blue-50', advice: 'Flood zone alert. Ask about Progressive Flood Insurance endorsements.' };
   }
   if (lowerCity.includes('california') || lowerCity.includes('los angeles') || lowerCity.includes('francisco')) {
-    return { condition: 'Dry/Arid', risk: 'Wildfire', icon: Sun, color: 'text-orange-600 bg-orange-50', advice: 'High fire risk area. Check homeowner policy for fire exclusions.' };
+    return { condition: 'Dry/Arid', risk: 'Wildfire', icon: Sun, color: 'text-orange-600 bg-orange-50', advice: 'High fire risk area. Check Progressive Homeowners policy for fire exclusions.' };
   }
   if (lowerCity.includes('seattle') || lowerCity.includes('london')) {
-    return { condition: 'Constant Rain', risk: 'Slippery Roads', icon: Umbrella, color: 'text-cyan-600 bg-cyan-50', advice: 'Increased accident risk. Ensure collision deductibles are manageable.' };
+    return { condition: 'Constant Rain', risk: 'Slippery Roads', icon: Umbrella, color: 'text-cyan-600 bg-cyan-50', advice: 'Increased accident risk. Ensure Progressive Collision deductibles are manageable.' };
   }
-  return { condition: 'Clear', risk: 'Low', icon: Sun, color: 'text-yellow-600 bg-yellow-50', advice: 'Conditions are stable. Standard coverage reviews recommended.' };
+  return { condition: 'Clear', risk: 'Low', icon: Sun, color: 'text-yellow-600 bg-yellow-50', advice: 'Conditions are stable. A perfect time to bundle and save with Progressive.' };
 };
 
 // --- COMPONENTS ---
@@ -98,7 +98,7 @@ const WeatherCard = ({ location }) => {
 export default function App() {
   // --- STATE ---
   const [messages, setMessages] = useState([
-    { role: 'system', content: "Hello! I'm Progressive Policy AI Insurance. I can help simplify your policies, recommend coverage, or check for local risks like hail or floods. How can I help you today?" }
+    { role: 'system', content: "Hello! I'm your Progressive Insurance AI Agent. I can help you find the perfect Progressive policy, explain our coverage options like Snapshot®, or check for local risks. How can I help you save with Progressive today?" }
   ]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -144,8 +144,9 @@ export default function App() {
       // 1. Prepare Context
       const weatherData = getWeatherRisk(profile.location);
       
+      // --- STRICT PROGRESSIVE ONLY PROMPT ---
       const systemContext = `
-        You are an expert Insurance Consultant AI named "Progressive Policy AI Insurance".
+        You are an exclusive Insurance Agent for "Progressive Insurance".
         
         User Profile Context:
         - Name: ${profile.name}
@@ -159,10 +160,11 @@ export default function App() {
         - Automated Advice: ${weatherData.advice}
 
         INSTRUCTIONS:
-        1. Use the User Profile to personalize advice.
-        2. CRITICAL: You MUST reference the "Current Local Risk Data" above.
-        3. Simplify any complex insurance terms you use.
-        4. Keep the tone professional, empathetic, and trustworthy.
+        1. You ONLY represent Progressive Insurance. Do not mention or recommend any other insurance companies.
+        2. Recommend specific Progressive products (e.g., Progressive Snapshot®, Progressive Home & Auto Bundle, Name Your Price® Tool) based on the user's profile and assets.
+        3. Use the User Profile to personalize advice.
+        4. CRITICAL: You MUST reference the "Current Local Risk Data" above and explain how specific Progressive coverage protects against it.
+        5. Keep the tone professional, empathetic, and trustworthy.
       `;
 
       // 2. SEND TO YOUR CLOUD BACKEND
